@@ -1,5 +1,6 @@
 # developer-test
 Small mobile app to test iOS knowledge
+
 On startup the app should connect to this API: 
 http://hn.algolia.com/api/v1/search_by_date?query=ios 
 which shows recently posted articles about iOS on Hacker News
