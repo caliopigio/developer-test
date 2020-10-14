@@ -32,6 +32,8 @@ class WebServices {
                     }
                     
                     completion(articles)
+                } else { // no data
+                    completion([])
                 }
             }.resume()
         }

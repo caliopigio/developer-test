@@ -22,6 +22,15 @@ class NewsViewController: UITableViewController {
         refreshControl?.addTarget(self, action: #selector(reloadData), for: .valueChanged)
         refreshControl?.beginRefreshing()
         reloadData()
+        
+        // get stored articles
+        if  let archivedData = try? Data(contentsOf: Article.filePath),
+            let object = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(archivedData) as? [Article]
+        {
+            articles = object
+            
+            tableView.reloadData()
+        }
     }
     
     // MARK: NewsViewController
@@ -30,10 +39,19 @@ class NewsViewController: UITableViewController {
         refreshControl?.endRefreshing()
         
         WebServices.getArticles { (articles) in
-            self.articles = articles
-            
-            OperationQueue.main.addOperation {
-                self.tableView.reloadData()
+            // there is new articles
+            if articles.count > 0 {
+                // store new articles
+                if let data = try? NSKeyedArchiver.archivedData(withRootObject: articles, requiringSecureCoding: false) {
+                    try? data.write(to: Article.filePath)
+                }
+                
+                // show new articles
+                self.articles = articles
+                
+                OperationQueue.main.addOperation {
+                    self.tableView.reloadData()
+                }
             }
         }
     }
@@ -75,7 +93,7 @@ class NewsViewController: UITableViewController {
     // MARK: UITableViewDelegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        if let url = articles[indexPath.row].storyURL {
+        if let url = articles[indexPath.row].storyUrl {
             let config = SFSafariViewController.Configuration()
             //config.entersReaderIfAvailable = true
             
@@ -92,6 +110,7 @@ class NewsViewController: UITableViewController {
         if editingStyle == .delete {
             let defaults = UserDefaults.standard
             
+            // store deleted articles ids
             if var deleted = defaults.array(forKey: Article.deletedArticles) as? [String] {
                 deleted.append(articles[indexPath.row].identifier!)
                 
@@ -102,6 +121,7 @@ class NewsViewController: UITableViewController {
             
             defaults.synchronize()
             
+            //remove deleted articles
             articles.remove(at: indexPath.row)
             
             tableView.deleteRows(at: [indexPath], with: .fade)

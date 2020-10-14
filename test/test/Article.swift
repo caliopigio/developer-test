@@ -7,8 +7,11 @@
 
 import Foundation
 
+//MARK: DateFormatter extension
+
 extension DateFormatter {
 
+    // returns a Date object from the given string witn 2 possible formats
     func dateFromJSONString(_ string: String) -> Date? {
         self.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
         
@@ -22,7 +25,10 @@ extension DateFormatter {
     }
 }
 
-struct Article {
+
+// MARK: Article
+
+class Article: NSObject, NSCoding {
 /*
  Dictionary.Keys(["url", "story_url", "num_comments", "points", "parent_id", "created_at_i", "_highlightResult", "created_at", "story_title", "title", "objectID", "story_id", "author", "comment_text", "story_text", "_tags"])
  */
@@ -50,7 +56,7 @@ struct Article {
     var storyTitle: String?
     var author: String?
     var createdAt: Date?
-    var storyURL: URL?
+    var storyUrl: URL?
     
     static let formatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -60,8 +66,16 @@ struct Article {
         return formatter
     } ()
     
+    // path to store articles for offline use
+    static let filePath: URL = {
+        let path = FileManager().urls(for: .documentDirectory, in: .userDomainMask).first!
+        
+        return path.appendingPathComponent("articles.data")
+    } ()
+    
     init?(dictionary: [String: Any]) {
         if let identifier = dictionary[Article.objectIdKey] as? String {
+            // discard deleted articles
             if  let deleted = UserDefaults.standard.array(forKey: Article.deletedArticles) as? [String],
                 deleted.contains(identifier)
             {
@@ -69,7 +83,7 @@ struct Article {
             }
             
             self.identifier = identifier
-        } else {
+        } else { // discard articles without id
             return nil
         }
         
@@ -92,7 +106,46 @@ struct Article {
         if  let storyUrl = dictionary[Article.storyUrlKey] as? String,
             let url = URL(string: storyUrl)
         {
-            self.storyURL = url
+            self.storyUrl = url
+        }
+    }
+    
+    required convenience init?(coder: NSCoder) {
+        var dictionary: [String: Any] = [:]
+        
+        dictionary[Article.objectIdKey] = coder.decodeObject(forKey: Article.objectIdKey)
+        dictionary[Article.titleKey] = coder.decodeObject(forKey: Article.titleKey)
+        dictionary[Article.storyTitleKey] = coder.decodeObject(forKey: Article.storyTitleKey)
+        dictionary[Article.authorKey] = coder.decodeObject(forKey: Article.authorKey)
+        dictionary[Article.createdAtKey] = coder.decodeObject(forKey: Article.createdAtKey)
+        dictionary[Article.storyUrlKey] = coder.decodeObject(forKey: Article.storyUrlKey)
+        
+        self.init(dictionary: dictionary)
+    }
+    
+    func encode(with coder: NSCoder) {
+        if let identifier = self.identifier {
+            coder.encode(identifier, forKey: Article.objectIdKey)
+        }
+        
+        if let title = self.title {
+            coder.encode(title, forKey: Article.titleKey)
+        }
+        
+        if let storyTitle = self.storyTitle {
+            coder.encode(storyTitle, forKey: Article.storyTitleKey)
+        }
+        
+        if let author = self.author {
+            coder.encode(author, forKey: Article.authorKey)
+        }
+        
+        if let createdAt = self.createdAt {
+            coder.encode(createdAt, forKey: Article.createdAtKey)
+        }
+        
+        if let storyUrl = self.storyUrl {
+            coder.encode(storyUrl, forKey: Article.storyUrlKey)
         }
     }
 }
